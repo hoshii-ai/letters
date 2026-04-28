@@ -488,20 +488,41 @@ func ParseContentTypeHeader(s string) (ContentTypeHeader, error) {
 	}, nil
 }
 
-func (ep *EmailParser) ParseHeaders(header mail.Header) (Headers, error) {
+func (ep *EmailParser) ParseHeaders(header mail.Header) (Headers, bool, error) {
+	var (
+		headers    Headers
+		anySkipped bool
+	)
+
+	headers.Date = ep.headersParsers.Date(header.Get("Date"))
+	headers.MessageID = ep.headersParsers.MessageID(header.Get("Message-ID"))
+	headers.InReplyTo = ep.headersParsers.InReplyTo(header.Get("In-Reply-To"))
+	headers.References = ep.headersParsers.References(header.Get("References"))
+	headers.Subject = ep.headersParsers.Subject(header.Get("Subject"))
+	headers.Comments = ep.headersParsers.Comments(header.Get("Comments"))
+	headers.Keywords = ep.headersParsers.Keywords(header.Get("Keywords"))
+	headers.ResentDate = ep.headersParsers.ResentDate(header.Get("Resent-Date"))
+	headers.ResentMessageID = ep.headersParsers.ResentMessageID(header.Get("Resent-Message-ID"))
+
 	contentType, err := ep.headersParsers.ContentType(
 		header.Get("Content-Type"),
 	)
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Content-Type: %w",
 			err)
 	}
+	headers.ContentType = contentType
 
 	contentDisposition, _ := ep.headersParsers.ContentDisposition(
 		header.Get("Content-Disposition"),
 	)
+	headers.ContentDisposition = contentDisposition
 
 	extraHeaders := make(map[string][]string)
 	for key, value := range header {
@@ -524,141 +545,163 @@ func (ep *EmailParser) ParseHeaders(header mail.Header) (Headers, error) {
 		}
 		extraHeaders[key] = normalisedVals
 	}
+	headers.ExtraHeaders = extraHeaders
 
 	sender, err := ep.headersParsers.Sender(header, "Sender")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Sender header: %w",
 			err,
 		)
 	}
+	headers.Sender = sender
 
 	from, err := ep.headersParsers.From(header, "From")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse From header: %w",
 			err,
 		)
 	}
+	headers.From = from
 
 	replyTo, err := ep.headersParsers.ReplyTo(header, "Reply-To")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Reply-To header: %w",
 			err,
 		)
 	}
+	headers.ReplyTo = replyTo
 
 	to, err := ep.headersParsers.To(header, "To")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse To header: %w",
 			err,
 		)
 	}
+	headers.To = to
 
 	cc, err := ep.headersParsers.Cc(header, "Cc")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Cc header: %w",
 			err,
 		)
 	}
+	headers.Cc = cc
 
 	bcc, err := ep.headersParsers.Bcc(header, "Bcc")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Bcc header: %w",
 			err,
 		)
 	}
+	headers.Bcc = bcc
 
 	resentFrom, err := ep.headersParsers.ResentFrom(header, "Resent-From")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Resent-From header: %w",
 			err,
 		)
 	}
+	headers.ResentFrom = resentFrom
 
 	resentSender, err := ep.headersParsers.ResentSender(header, "Resent-Sender")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Resent-Sender header: %w",
 			err,
 		)
 	}
+	headers.ResentSender = resentSender
 
 	resentTo, err := ep.headersParsers.ResentTo(header, "Resent-To")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Resent-To header: %w",
 			err,
 		)
 	}
+	headers.ResentTo = resentTo
 
 	resentCc, err := ep.headersParsers.ResentCc(header, "Resent-Cc")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Resent-Cc header: %w",
 			err,
 		)
 	}
+	headers.ResentCc = resentCc
 
 	resentBcc, err := ep.headersParsers.ResentBcc(header, "Resent-Bcc")
 	if err != nil {
-		return Headers{}, fmt.Errorf(
+		if ep.skipMalformedHeaders {
+			anySkipped = true
+			return headers, anySkipped, nil
+		}
+		return headers, anySkipped, fmt.Errorf(
 			"letters.parsers.ParseHeaders: "+
 				"cannot parse Resent-Bcc header: %w",
 			err,
 		)
 	}
+	headers.ResentBcc = resentBcc
 
-	return Headers{
-		Date:    ep.headersParsers.Date(header.Get("Date")),
-		Sender:  sender,
-		From:    from,
-		ReplyTo: replyTo,
-		To:      to,
-		Cc:      cc,
-		Bcc:     bcc,
-		MessageID: ep.headersParsers.MessageID(
-			header.Get("Message-ID"),
-		),
-		InReplyTo: ep.headersParsers.InReplyTo(
-			header.Get("In-Reply-To"),
-		),
-		References: ep.headersParsers.References(
-			header.Get("References"),
-		),
-		Subject:  ep.headersParsers.Subject(header.Get("Subject")),
-		Comments: ep.headersParsers.Comments(header.Get("Comments")),
-		Keywords: ep.headersParsers.Keywords(header.Get("Keywords")),
-		ResentDate: ep.headersParsers.ResentDate(
-			header.Get("Resent-Date"),
-		),
-		ResentFrom:   resentFrom,
-		ResentSender: resentSender,
-		ResentTo:     resentTo,
-		ResentCc:     resentCc,
-		ResentBcc:    resentBcc,
-		ResentMessageID: ep.headersParsers.ResentMessageID(
-			header.Get("Resent-Message-ID"),
-		),
-		ContentType:        contentType,
-		ContentDisposition: contentDisposition,
-		ExtraHeaders:       extraHeaders,
-	}, nil
+	return headers, anySkipped, nil
 }
 
 func parseText(
@@ -720,12 +763,15 @@ func (ep *EmailParser) parsePart(
 	msg io.Reader,
 	parentContentType ContentTypeHeader,
 	boundary string,
-) (emailBodies, error) {
-	var emailBodies emailBodies
+) (emailBodies, bool, error) {
+	var (
+		emailBodies emailBodies
+		anySkipped  bool
+	)
 
 	multipartReader := multipart.NewReader(msg, boundary)
 	if multipartReader == nil {
-		return emailBodies, nil
+		return emailBodies, true, nil
 	}
 
 	for {
@@ -736,7 +782,11 @@ func (ep *EmailParser) parsePart(
 			if strings.Contains(err.Error(), "EOF") {
 				break
 			}
-			return emailBodies, fmt.Errorf(
+			if ep.skipMalformedParts {
+				anySkipped = true
+				continue
+			}
+			return emailBodies, anySkipped, fmt.Errorf(
 				"letters.parsers.parsePart: cannot read part: %w",
 				err,
 			)
@@ -746,7 +796,11 @@ func (ep *EmailParser) parsePart(
 			part.Header.Get("Content-Type"),
 		)
 		if err != nil {
-			return emailBodies, fmt.Errorf(
+			if ep.skipMalformedParts {
+				anySkipped = true
+				continue
+			}
+			return emailBodies, anySkipped, fmt.Errorf(
 				"letters.parsers.parsePart: "+
 					"cannot parse Content-Type: %w",
 				err,
@@ -763,7 +817,11 @@ func (ep *EmailParser) parsePart(
 			part.Header.Get("Content-Transfer-Encoding"),
 		)
 		if err != nil {
-			return emailBodies, fmt.Errorf(
+			if ep.skipMalformedParts {
+				anySkipped = true
+				continue
+			}
+			return emailBodies, anySkipped, fmt.Errorf(
 				"letters.parsers.parsePart: "+
 					"cannot parse Content-Transfer-Encoding: %w",
 				err,
@@ -774,7 +832,11 @@ func (ep *EmailParser) parsePart(
 			part.Header.Get("Content-Disposition"),
 		)
 		if err != nil {
-			return emailBodies, fmt.Errorf(
+			if ep.skipMalformedParts {
+				anySkipped = true
+				continue
+			}
+			return emailBodies, anySkipped, fmt.Errorf(
 				"letters.parsers.parsePart: "+
 					"cannot parse Content-Disposition: %w",
 				err,
@@ -787,7 +849,11 @@ func (ep *EmailParser) parsePart(
 
 			attachedFile, err := decodeAttachedFileFromPart(part, cte)
 			if err != nil {
-				return emailBodies, fmt.Errorf(
+				if ep.skipMalformedParts {
+					anySkipped = true
+					continue
+				}
+				return emailBodies, anySkipped, fmt.Errorf(
 					"letters.parsers.parsePart: "+
 						"cannot decode attached file: %w",
 					err,
@@ -807,7 +873,11 @@ func (ep *EmailParser) parsePart(
 
 			partTextBody, err := parseText(part, enc, cte)
 			if err != nil {
-				return emailBodies, fmt.Errorf(
+				if ep.skipMalformedParts {
+					anySkipped = true
+					continue
+				}
+				return emailBodies, anySkipped, fmt.Errorf(
 					"letters.parsers.parsePart: "+
 						"cannot parse plain text: %w",
 					err,
@@ -825,7 +895,11 @@ func (ep *EmailParser) parsePart(
 
 			partEnrichedText, err := parseText(part, enc, cte)
 			if err != nil {
-				return emailBodies, fmt.Errorf(
+				if ep.skipMalformedParts {
+					anySkipped = true
+					continue
+				}
+				return emailBodies, anySkipped, fmt.Errorf(
 					"letters.parsers.parsePart: "+
 						"cannot parse enriched text: %w",
 					err,
@@ -842,7 +916,11 @@ func (ep *EmailParser) parsePart(
 
 			partHtmlBody, err := parseText(part, enc, cte)
 			if err != nil {
-				return emailBodies, fmt.Errorf(
+				if ep.skipMalformedParts {
+					anySkipped = true
+					continue
+				}
+				return emailBodies, anySkipped, fmt.Errorf(
 					"letters.parsers.parsePart: "+
 						"cannot parse html text: %w",
 					err,
@@ -856,13 +934,17 @@ func (ep *EmailParser) parsePart(
 			partContentType.ContentType,
 			contentTypeMultipartPrefix,
 		) {
-			nestedEmailBodies, err := ep.parsePart(
+			nestedEmailBodies, anySkipped_, err := ep.parsePart(
 				part,
 				partContentType,
 				partContentType.Params["boundary"],
 			)
 			if err != nil {
-				return emailBodies, fmt.Errorf(
+				if ep.skipMalformedParts {
+					anySkipped = true
+					continue
+				}
+				return emailBodies, anySkipped || anySkipped_, fmt.Errorf(
 					"letters.parsers.parsePart: "+
 						"cannot parse nested part: %w",
 					err,
@@ -880,7 +962,11 @@ func (ep *EmailParser) parsePart(
 
 			inlineFile, err := decodeInlineFile(part, cte)
 			if err != nil {
-				return emailBodies, fmt.Errorf(
+				if ep.skipMalformedParts {
+					anySkipped = true
+					continue
+				}
+				return emailBodies, anySkipped, fmt.Errorf(
 					"letters.parsers.parsePart: "+
 						"cannot decode inline file: %w",
 					err,
@@ -900,7 +986,11 @@ func (ep *EmailParser) parsePart(
 
 			attachedFile, err := decodeAttachedFileFromPart(part, cte)
 			if err != nil {
-				return emailBodies, fmt.Errorf(
+				if ep.skipMalformedParts {
+					anySkipped = true
+					continue
+				}
+				return emailBodies, anySkipped, fmt.Errorf(
 					"letters.parsers.parsePart: "+
 						"cannot decode attached file: %w",
 					err,
@@ -913,7 +1003,7 @@ func (ep *EmailParser) parsePart(
 			continue
 		}
 
-		return emailBodies, &UnknownContentTypeError{
+		return emailBodies, anySkipped, &UnknownContentTypeError{
 			contentType: parentContentType.ContentType,
 		}
 	}
@@ -922,5 +1012,5 @@ func (ep *EmailParser) parsePart(
 	emailBodies.enrichedText = strings.Trim(emailBodies.enrichedText, "\n")
 	emailBodies.html = strings.Trim(emailBodies.html, "\n")
 
-	return emailBodies, nil
+	return emailBodies, anySkipped, nil
 }

@@ -41,9 +41,14 @@ func testEmailCases(t *testing.T, tcs []emailTestCase) {
 				}
 			}()
 
-			parsedEmail, err := testCase.emailParser.Parse(rawEmail)
+			parsedEmail, anyHeadersOrPartsSkipped, err := testCase.emailParser.Parse(rawEmail)
 			if err != nil {
 				t.Errorf("error while parsing email: %s", err)
+				return
+			}
+
+			if anyHeadersOrPartsSkipped {
+				t.Errorf("some headers or parts were skipped")
 				return
 			}
 

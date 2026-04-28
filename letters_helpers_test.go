@@ -33,9 +33,14 @@ func testEmailHeadersFromFile(
 		return
 	}
 
-	parsedEmailHeaders, err := letters.ParseEmailHeaders(msg.Header)
+	parsedEmailHeaders, anyHeadersSkipped, err := letters.ParseEmailHeaders(msg.Header)
 	if err != nil {
 		t.Errorf("error while parsing email headers: %s", err)
+		return
+	}
+
+	if anyHeadersSkipped {
+		t.Errorf("some headers were skipped")
 		return
 	}
 

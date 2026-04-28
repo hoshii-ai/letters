@@ -242,3 +242,20 @@ func WithHeadersParsers(headersParsers HeadersParsers) EmailParserOption {
 		ep.headersParsers = headersParsers
 	}
 }
+
+// WithSkipMalformedHeaders configures the parser to skip headers whose
+// cannot be parsed, instead of aborting the entire message.
+func WithSkipMalformedHeaders(skip bool) EmailParserOption {
+	return func(ep *EmailParser) {
+		ep.skipMalformedHeaders = skip
+	}
+}
+
+// WithSkipMalformedParts configures the parser to skip MIME parts whose
+// headers (Content-Type, Content-Transfer-Encoding, Content-Disposition)
+// cannot be parsed, instead of aborting the entire message.
+func WithSkipMalformedParts(skip bool) EmailParserOption {
+	return func(ep *EmailParser) {
+		ep.skipMalformedParts = skip
+	}
+}
