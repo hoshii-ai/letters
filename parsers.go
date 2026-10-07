@@ -769,13 +769,26 @@ func (ep *EmailParser) parsePart(
 		anySkipped  bool
 	)
 
-	multipartReader := multipart.NewReader(msg, boundary)
-	if multipartReader == nil {
-		return emailBodies, true, nil
+	// multipart.Reader.NextPart fails on an empty boundary without consuming
+	// input, so the skip-and-continue loop below would never terminate.
+	if boundary == "" {
+		if ep.skipMalformedParts {
+			return emailBodies, true, nil
+		}
+		return emailBodies, anySkipped, fmt.Errorf(
+			"letters.parsers.parsePart: %s part has no boundary",
+			parentContentType.ContentType,
+		)
 	}
 
+	multipartReader := multipart.NewReader(msg, boundary)
+
+	consecutiveErrors := 0
 	for {
-		part, err := multipartReader.NextPart()
+		// NextRawPart: NextPart would wrap a part labelled quoted-printable in
+		// a decoder, which breaks nested multipart bodies that carry that label
+		// in error. Transfer encoding is decoded per part below instead.
+		part, err := multipartReader.NextRawPart()
 		if err == io.EOF {
 			break
 		} else if err != nil {
@@ -784,13 +797,20 @@ func (ep *EmailParser) parsePart(
 			}
 			if ep.skipMalformedParts {
 				anySkipped = true
-				continue
+				// Skipping only helps when the reader advanced; a repeating
+				// error means it did not, so stop rather than spin.
+				consecutiveErrors++
+				if consecutiveErrors < maxConsecutivePartErrors {
+					continue
+				}
+				break
 			}
 			return emailBodies, anySkipped, fmt.Errorf(
 				"letters.parsers.parsePart: cannot read part: %w",
 				err,
 			)
 		}
+		consecutiveErrors = 0
 
 		partContentType, err := ParseContentTypeHeader(
 			part.Header.Get("Content-Type"),
@@ -939,12 +959,13 @@ func (ep *EmailParser) parsePart(
 				partContentType,
 				partContentType.Params["boundary"],
 			)
+			anySkipped = anySkipped || anySkipped_
 			if err != nil {
 				if ep.skipMalformedParts {
 					anySkipped = true
 					continue
 				}
-				return emailBodies, anySkipped || anySkipped_, fmt.Errorf(
+				return emailBodies, anySkipped, fmt.Errorf(
 					"letters.parsers.parsePart: "+
 						"cannot parse nested part: %w",
 					err,

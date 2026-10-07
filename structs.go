@@ -52,6 +52,10 @@ var cdMap = map[string]ContentDisposition{
 
 const contentTypeMultipartPrefix = "multipart/"
 
+// maxConsecutivePartErrors bounds how many NextPart errors in a row parsePart
+// skips before giving up on the remaining parts.
+const maxConsecutivePartErrors = 64
+
 // const contentTypeMultipartAlternative = "multipart/alternative"
 // const contentTypeMultipartDigest = "multipart/digest"
 const (
