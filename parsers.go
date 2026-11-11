@@ -508,16 +508,16 @@ func (ep *EmailParser) ParseHeaders(header mail.Header) (Headers, bool, error) {
 		header.Get("Content-Type"),
 	)
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Content-Type: %w",
+				err)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Content-Type: %w",
-			err)
+		anySkipped = true
+	} else {
+		headers.ContentType = contentType
 	}
-	headers.ContentType = contentType
 
 	contentDisposition, _ := ep.headersParsers.ContentDisposition(
 		header.Get("Content-Disposition"),
@@ -549,157 +549,157 @@ func (ep *EmailParser) ParseHeaders(header mail.Header) (Headers, bool, error) {
 
 	sender, err := ep.headersParsers.Sender(header, "Sender")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Sender header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Sender header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.Sender = sender
 	}
-	headers.Sender = sender
 
 	from, err := ep.headersParsers.From(header, "From")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse From header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse From header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.From = from
 	}
-	headers.From = from
 
 	replyTo, err := ep.headersParsers.ReplyTo(header, "Reply-To")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Reply-To header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Reply-To header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.ReplyTo = replyTo
 	}
-	headers.ReplyTo = replyTo
 
 	to, err := ep.headersParsers.To(header, "To")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse To header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse To header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.To = to
 	}
-	headers.To = to
 
 	cc, err := ep.headersParsers.Cc(header, "Cc")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Cc header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Cc header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.Cc = cc
 	}
-	headers.Cc = cc
 
 	bcc, err := ep.headersParsers.Bcc(header, "Bcc")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Bcc header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Bcc header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.Bcc = bcc
 	}
-	headers.Bcc = bcc
 
 	resentFrom, err := ep.headersParsers.ResentFrom(header, "Resent-From")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Resent-From header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Resent-From header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.ResentFrom = resentFrom
 	}
-	headers.ResentFrom = resentFrom
 
 	resentSender, err := ep.headersParsers.ResentSender(header, "Resent-Sender")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Resent-Sender header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Resent-Sender header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.ResentSender = resentSender
 	}
-	headers.ResentSender = resentSender
 
 	resentTo, err := ep.headersParsers.ResentTo(header, "Resent-To")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Resent-To header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Resent-To header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.ResentTo = resentTo
 	}
-	headers.ResentTo = resentTo
 
 	resentCc, err := ep.headersParsers.ResentCc(header, "Resent-Cc")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Resent-Cc header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Resent-Cc header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.ResentCc = resentCc
 	}
-	headers.ResentCc = resentCc
 
 	resentBcc, err := ep.headersParsers.ResentBcc(header, "Resent-Bcc")
 	if err != nil {
-		if ep.skipMalformedHeaders {
-			anySkipped = true
-			return headers, anySkipped, nil
+		if !ep.skipMalformedHeaders {
+			return headers, anySkipped, fmt.Errorf(
+				"letters.parsers.ParseHeaders: "+
+					"cannot parse Resent-Bcc header: %w",
+				err,
+			)
 		}
-		return headers, anySkipped, fmt.Errorf(
-			"letters.parsers.ParseHeaders: "+
-				"cannot parse Resent-Bcc header: %w",
-			err,
-		)
+		anySkipped = true
+	} else {
+		headers.ResentBcc = resentBcc
 	}
-	headers.ResentBcc = resentBcc
 
 	return headers, anySkipped, nil
 }
